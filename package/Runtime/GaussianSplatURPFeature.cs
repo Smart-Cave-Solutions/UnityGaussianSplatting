@@ -45,10 +45,9 @@ namespace GaussianSplatting.Runtime
                 var cameraData = frameData.Get<UniversalCameraData>();
                 var resourceData = frameData.Get<UniversalResourceData>();
 
-                bool isStereo = XRSettings.enabled && cameraData.camera.stereoEnabled && 
-                                (XRSettings.stereoRenderingMode == XRSettings.StereoRenderingMode.SinglePassInstanced || 
-                                 XRSettings.stereoRenderingMode == XRSettings.StereoRenderingMode.SinglePassMultiview) &&
-                                !Application.isEditor;
+                bool isStereo = XRSettings.enabled && cameraData.camera.stereoEnabled &&
+                                (XRSettings.stereoRenderingMode == XRSettings.StereoRenderingMode.SinglePassInstanced ||
+                                 XRSettings.stereoRenderingMode == XRSettings.StereoRenderingMode.SinglePassMultiview);
                 RenderTextureDescriptor rtDesc = isStereo? XRSettings.eyeTextureDesc: cameraData.cameraTargetDescriptor;
                 rtDesc.depthBufferBits = 0;
                 rtDesc.msaaSamples = 1;
