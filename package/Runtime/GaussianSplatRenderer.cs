@@ -106,7 +106,7 @@ namespace GaussianSplatting.Runtime
                 return false;
 
             // sort them by order and depth from camera
-            var camTr = cam.transform;
+            var worldToCamera = cam.worldToCameraMatrix;
             m_ActiveSplats.Sort((a, b) =>
             {
                 var orderA = a.Item1.m_RenderOrder;
@@ -115,8 +115,8 @@ namespace GaussianSplatting.Runtime
                     return orderB.CompareTo(orderA);
                 var trA = a.Item1.transform;
                 var trB = b.Item1.transform;
-                var posA = camTr.InverseTransformPoint(trA.position);
-                var posB = camTr.InverseTransformPoint(trB.position);
+                var posA = worldToCamera.MultiplyPoint3x4(trA.position);
+                var posB = worldToCamera.MultiplyPoint3x4(trB.position);
                 return posA.z.CompareTo(posB.z);
             });
 
