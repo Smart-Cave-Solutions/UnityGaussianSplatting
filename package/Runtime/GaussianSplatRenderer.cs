@@ -89,7 +89,7 @@ namespace GaussianSplatting.Runtime
         }
 
         // ReSharper disable once MemberCanBePrivate.Global - used by HDRP/URP features that are not always compiled
-        public bool GatherSplatsForCamera(Camera cam)
+        public bool GatherSplatsForCamera(Camera cam, Matrix4x4? worldToCamera = null)
         {
             if (cam.cameraType == CameraType.Preview)
                 return false;
@@ -106,7 +106,7 @@ namespace GaussianSplatting.Runtime
                 return false;
 
             // sort them by order and depth from camera
-            var camTr = cam.transform;
+            var camTr = worldToCamera ?? cam.transform.worldToLocalMatrix;
             m_ActiveSplats.Sort((a, b) =>
             {
                 var orderA = a.Item1.m_RenderOrder;
@@ -115,8 +115,8 @@ namespace GaussianSplatting.Runtime
                     return orderB.CompareTo(orderA);
                 var trA = a.Item1.transform;
                 var trB = b.Item1.transform;
-                var posA = camTr.InverseTransformPoint(trA.position);
-                var posB = camTr.InverseTransformPoint(trB.position);
+                var posA = camTr.MultiplyPoint3x4(trA.position);
+                var posB = camTr.MultiplyPoint3x4(trB.position);
                 return posA.z.CompareTo(posB.z);
             });
 
@@ -126,7 +126,7 @@ namespace GaussianSplatting.Runtime
         // New optimized method that prepares everything once for stereo rendering
         // This does the sorting and calculates view data, but doesn't actually render
         // ReSharper disable once MemberCanBePrivate.Global - used by HDRP/URP features that are not always compiled
-        public PreparedRenderData PrepareSplats(Camera cam, CommandBuffer cmb)
+        public PreparedRenderData PrepareSplats(Camera cam, CommandBuffer cmb, Matrix4x4 view)
         {
             if (m_LastPreparedData == null)
             {
@@ -149,7 +149,7 @@ namespace GaussianSplatting.Runtime
                 // Sort the splats
                 var matrix = gs.transform.localToWorldMatrix;
                 if (gs.m_FrameCounter % gs.m_SortNthFrame == 0)
-                    gs.SortPoints(cmb, cam, matrix);
+                    gs.SortPoints(cmb, cam, matrix, view);
                 ++gs.m_FrameCounter;
 
                 // Prepare material and view data
@@ -180,7 +180,7 @@ namespace GaussianSplatting.Runtime
 
                 // Calculate view data once for stereo (will calculate for both eyes)
                 cmb.BeginSample(s_ProfCalcView);
-                gs.CalcViewData(cmb, cam);
+                gs.CalcViewData(cmb, cam, view);
                 cmb.EndSample(s_ProfCalcView);
 
                 // Set up draw parameters
@@ -221,10 +221,10 @@ namespace GaussianSplatting.Runtime
         }
 
         // ReSharper disable once MemberCanBePrivate.Global - used by HDRP/URP features that are not always compiled
-        public Material SortAndRenderSplats(Camera cam, CommandBuffer cmb, int eyeIndex = -1)
+        public Material SortAndRenderSplats(Camera cam, CommandBuffer cmb, Matrix4x4 view, int eyeIndex = -1)
         {
             // Prepare the splats (sort and calculate view data)
-            var renderData = PrepareSplats(cam, cmb);
+            var renderData = PrepareSplats(cam, cmb, view);
             
             // Render the prepared splats
             RenderPreparedSplats(cmb, eyeIndex);
@@ -265,7 +265,7 @@ namespace GaussianSplatting.Runtime
             m_CommandBuffer.SetGlobalTexture(GaussianSplatRenderer.Props.CameraTargetTexture, BuiltinRenderTextureType.CameraTarget);
 
             // add sorting, view calc and drawing commands for each splat object
-            Material matComposite = SortAndRenderSplats(cam, m_CommandBuffer);
+            Material matComposite = SortAndRenderSplats(cam, m_CommandBuffer, cam.worldToCameraMatrix);
 
             // compose
             m_CommandBuffer.BeginSample(s_ProfCompose);
@@ -668,14 +668,14 @@ namespace GaussianSplatting.Runtime
             DestroyImmediate(m_MatDebugBoxes);
         }
 
-        internal void CalcViewData(CommandBuffer cmb, Camera cam)
+        internal void CalcViewData(CommandBuffer cmb, Camera cam, Matrix4x4 view)
         {
             if (cam.cameraType == CameraType.Preview)
                 return;
 
             var tr = transform;
 
-            Matrix4x4 matView = cam.worldToCameraMatrix;
+            Matrix4x4 matView = view;
             Matrix4x4 matO2W = tr.localToWorldMatrix;
             Matrix4x4 matW2O = tr.worldToLocalMatrix;
             int screenW = cam.pixelWidth, screenH = cam.pixelHeight;
@@ -723,12 +723,12 @@ namespace GaussianSplatting.Runtime
             cmb.DispatchCompute(m_CSSplatUtilities, (int)KernelIndices.CalcViewData, (m_SplatCount + (int)gsX - 1)/(int)gsX, 1, 1);
         }
 
-        internal void SortPoints(CommandBuffer cmd, Camera cam, Matrix4x4 matrix)
+        internal void SortPoints(CommandBuffer cmd, Camera cam, Matrix4x4 matrix, Matrix4x4 view)
         {
             if (cam.cameraType == CameraType.Preview)
                 return;
 
-            Matrix4x4 worldToCamMatrix = cam.worldToCameraMatrix;
+            Matrix4x4 worldToCamMatrix = view;
             worldToCamMatrix.m20 *= -1;
             worldToCamMatrix.m21 *= -1;
             worldToCamMatrix.m22 *= -1;
