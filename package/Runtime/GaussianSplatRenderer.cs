@@ -46,6 +46,7 @@ namespace GaussianSplatting.Runtime
         {
             public Material matComposite;
             public List<RenderItem> renderItems = new();
+            public Vector4 screenParams;
         }
         
         private PreparedRenderData m_LastPreparedData;
@@ -136,7 +137,9 @@ namespace GaussianSplatting.Runtime
             {
                 m_LastPreparedData.renderItems.Clear();
             }
-            
+
+            m_LastPreparedData.screenParams = GaussianSplatRenderer.GetRenderScreenParams(cam);
+
             Material matComposite = null;
 
             foreach (var kvp in m_ActiveSplats)
@@ -180,7 +183,7 @@ namespace GaussianSplatting.Runtime
 
                 // Calculate view data once for stereo (will calculate for both eyes)
                 cmb.BeginSample(s_ProfCalcView);
-                gs.CalcViewData(cmb, cam, view);
+                gs.CalcViewData(cmb, cam, view, m_LastPreparedData.screenParams);
                 cmb.EndSample(s_ProfCalcView);
 
                 // Set up draw parameters
@@ -206,6 +209,9 @@ namespace GaussianSplatting.Runtime
         {
             if (m_LastPreparedData == null || m_LastPreparedData.renderItems.Count == 0)
                 return;
+
+            cmb.SetGlobalVector(GaussianSplatRenderer.Props.VecScreenParams, m_LastPreparedData.screenParams);
+            cmb.SetGlobalVector(GaussianSplatRenderer.Props.ScreenParams, m_LastPreparedData.screenParams);
 
             foreach (var item in m_LastPreparedData.renderItems)
             {
@@ -410,6 +416,7 @@ namespace GaussianSplatting.Runtime
             public static readonly int SplatOtherMouseDown = Shader.PropertyToID("_SplatOtherMouseDown");
             public static readonly int ViewProjMatrixLeft = Shader.PropertyToID("_ViewProjMatrixLeft");
             public static readonly int ViewProjMatrixRight = Shader.PropertyToID("_ViewProjMatrixRight");
+            public static readonly int ScreenParams = Shader.PropertyToID("_ScreenParams");
         }
 
         [field: NonSerialized] public bool editModified { get; private set; }
@@ -555,6 +562,35 @@ namespace GaussianSplatting.Runtime
             }
         }
 
+        static Vector2Int GetRenderResolution(Camera cam)
+        {
+            if (cam == null)
+                return new Vector2Int(1, 1);
+
+            if (XRSettings.enabled && cam.stereoEnabled)
+            {
+                var eyeDesc = XRSettings.eyeTextureDesc;
+                if (eyeDesc.width > 0 && eyeDesc.height > 0)
+                    return new Vector2Int(eyeDesc.width, eyeDesc.height);
+            }
+
+            if (cam.activeTexture != null)
+                return new Vector2Int(cam.activeTexture.width, cam.activeTexture.height);
+
+            if (cam.targetTexture != null)
+                return new Vector2Int(cam.targetTexture.width, cam.targetTexture.height);
+
+            return new Vector2Int(cam.pixelWidth, cam.pixelHeight);
+        }
+
+        internal static Vector4 GetRenderScreenParams(Camera cam)
+        {
+            var resolution = GetRenderResolution(cam);
+            float width = Mathf.Max(1, resolution.x);
+            float height = Mathf.Max(1, resolution.y);
+            return new Vector4(width, height, 1f + 1f / width, 1f + 1f / height);
+        }
+
         public void OnEnable()
         {
             m_FrameCounter = 0;
@@ -668,7 +704,7 @@ namespace GaussianSplatting.Runtime
             DestroyImmediate(m_MatDebugBoxes);
         }
 
-        internal void CalcViewData(CommandBuffer cmb, Camera cam, Matrix4x4 view)
+        internal void CalcViewData(CommandBuffer cmb, Camera cam, Matrix4x4 view, Vector4 screenParams)
         {
             if (cam.cameraType == CameraType.Preview)
                 return;
@@ -678,9 +714,6 @@ namespace GaussianSplatting.Runtime
             Matrix4x4 matView = view;
             Matrix4x4 matO2W = tr.localToWorldMatrix;
             Matrix4x4 matW2O = tr.worldToLocalMatrix;
-            int screenW = cam.pixelWidth, screenH = cam.pixelHeight;
-            int eyeW = XRSettings.eyeTextureWidth, eyeH = XRSettings.eyeTextureHeight;
-            Vector4 screenPar = new Vector4(eyeW != 0 ? eyeW : screenW, eyeH != 0 ? eyeH : screenH, 0, 0);
             Vector4 camPos = cam.transform.position;
 
             // calculate view dependent data for each splat
@@ -712,7 +745,7 @@ namespace GaussianSplatting.Runtime
                 cmb.SetComputeIntParam(m_CSSplatUtilities, Props.IsStereo, 0);
             }
 
-            cmb.SetComputeVectorParam(m_CSSplatUtilities, Props.VecScreenParams, screenPar);
+            cmb.SetComputeVectorParam(m_CSSplatUtilities, Props.VecScreenParams, screenParams);
             cmb.SetComputeVectorParam(m_CSSplatUtilities, Props.VecWorldSpaceCameraPos, camPos);
             cmb.SetComputeFloatParam(m_CSSplatUtilities, Props.SplatScale, m_SplatScale);
             cmb.SetComputeFloatParam(m_CSSplatUtilities, Props.SplatOpacityScale, m_OpacityScale);
