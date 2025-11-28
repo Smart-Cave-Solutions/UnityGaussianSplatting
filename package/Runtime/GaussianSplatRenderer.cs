@@ -173,6 +173,7 @@ namespace GaussianSplatting.Runtime
                 mpb.SetFloat(GaussianSplatRenderer.Props.SplatScale, gs.m_SplatScale);
                 mpb.SetFloat(GaussianSplatRenderer.Props.SplatOpacityScale, gs.m_OpacityScale);
                 mpb.SetFloat(GaussianSplatRenderer.Props.SplatSize, gs.m_PointDisplaySize);
+                mpb.SetFloat(GaussianSplatRenderer.Props.SplatNearClip, gs.m_NearClipPlane);
                 mpb.SetInteger(GaussianSplatRenderer.Props.SHOrder, gs.m_SHOrder);
                 mpb.SetInteger(GaussianSplatRenderer.Props.SHOnly, gs.m_SHOnly ? 1 : 0);
                 mpb.SetInteger(GaussianSplatRenderer.Props.DisplayIndex, gs.m_RenderMode == GaussianSplatRenderer.RenderMode.DebugPointIndices ? 1 : 0);
@@ -315,6 +316,8 @@ namespace GaussianSplatting.Runtime
         public int m_SortNthFrame = 1;
         [Tooltip("When in VR, sort splats separately for each eye. This increases accuracy but reduces performance.")]
         public bool m_SortPerEye = false;
+        [Range(0,10)] [Tooltip("Cull splats close to the camera")]
+        public float m_NearClipPlane = 1f;
 
         public RenderMode m_RenderMode = RenderMode.Splats;
         [Range(1.0f,15.0f)] public float m_PointDisplaySize = 3.0f;
@@ -384,6 +387,7 @@ namespace GaussianSplatting.Runtime
             public static readonly int SplatOpacityScale = Shader.PropertyToID("_SplatOpacityScale");
             public static readonly int SplatSize = Shader.PropertyToID("_SplatSize");
             public static readonly int SplatCount = Shader.PropertyToID("_SplatCount");
+            public static readonly int SplatNearClip = Shader.PropertyToID("_SplatNearClip");
             public static readonly int SHOrder = Shader.PropertyToID("_SHOrder");
             public static readonly int SHOnly = Shader.PropertyToID("_SHOnly");
             public static readonly int DisplayIndex = Shader.PropertyToID("_DisplayIndex");

@@ -36,6 +36,7 @@ namespace GaussianSplatting.Editor
         SerializedProperty m_PropShaderDebugPoints;
         SerializedProperty m_PropShaderDebugBoxes;
         SerializedProperty m_PropCSSplatUtilities;
+        SerializedProperty m_NearClipPlane;
 
         bool m_ResourcesExpanded = false;
         int m_CameraIndex = 0;
@@ -69,6 +70,7 @@ namespace GaussianSplatting.Editor
             m_PropSHOnly = serializedObject.FindProperty("m_SHOnly");
             m_PropSortNthFrame = serializedObject.FindProperty("m_SortNthFrame");
             m_PropSortPerEye = serializedObject.FindProperty("m_SortPerEye");
+            m_NearClipPlane = serializedObject.FindProperty("m_NearClipPlane");
             m_PropRenderMode = serializedObject.FindProperty("m_RenderMode");
             m_PropPointDisplaySize = serializedObject.FindProperty("m_PointDisplaySize");
             m_PropCutouts = serializedObject.FindProperty("m_Cutouts");
@@ -114,6 +116,8 @@ namespace GaussianSplatting.Editor
             EditorGUILayout.PropertyField(m_PropSHOnly);
             EditorGUILayout.PropertyField(m_PropSortNthFrame);
             EditorGUILayout.PropertyField(m_PropSortPerEye);
+            EditorGUILayout.PropertyField(m_NearClipPlane);
+
             EditorGUILayout.Space();
             GUILayout.Label("Debugging Tweaks", EditorStyles.boldLabel);
             EditorGUILayout.PropertyField(m_PropRenderMode);

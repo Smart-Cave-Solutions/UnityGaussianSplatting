@@ -33,6 +33,8 @@ ByteAddressBuffer _SplatSelectedBits;
 uint _SplatBitsValid;
 uint _EyeIndex;
 uint _IsStereo;
+float _SplatNearClip;
+
 v2f vert (uint vtxID : SV_VertexID, uint instID : SV_InstanceID)
 {
 	v2f o = (v2f)0;
@@ -41,7 +43,7 @@ v2f vert (uint vtxID : SV_VertexID, uint instID : SV_InstanceID)
 	uint viewIndex = _IsStereo ? instID * 2 + eyeIndex : instID;
 	SplatViewData view = _SplatViewData[viewIndex];
 	float4 centerClipPos = view.pos;
-	bool behindCam = centerClipPos.w <= 0;
+	bool behindCam = centerClipPos.w <= _SplatNearClip;
 	if (behindCam)
 	{
 		o.vertex = asfloat(0x7fc00000); // NaN discards the primitive
