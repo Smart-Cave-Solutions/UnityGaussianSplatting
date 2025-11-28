@@ -278,7 +278,7 @@ void CSCalcViewData (uint3 id : SV_DispatchThreadID)
     }
     else
     {
-        _SplatViewData[idx] = CalculateEyeViewData(splat, centerWorldPos, _MatrixP, isDeleted, isCut, splatScale, opacityScale);
+        _SplatViewData[idx] = CalculateEyeViewData(splat, centerWorldPos, UNITY_MATRIX_VP, isDeleted, isCut, splatScale, opacityScale);
     }
 }
 
