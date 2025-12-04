@@ -83,11 +83,11 @@ namespace GaussianSplatting.Runtime
                             CoreUtils.SetRenderTarget(commandBuffer, data.GaussianSplatRT, ClearFlag.Color, Color.clear);
 
                             // Left eye
-                            CoreUtils.SetRenderTarget(commandBuffer, data.GaussianSplatRT, ClearFlag.Color, Color.clear, 0, CubemapFace.Unknown, 0);
+                            CoreUtils.SetRenderTarget(commandBuffer, data.GaussianSplatRT, data.SourceDepth, ClearFlag.Color, Color.clear, 0, CubemapFace.Unknown, 0);
                             matComposite = GaussianSplatRenderSystem.instance.SortAndRenderSplats(data.CameraData.camera, commandBuffer, data.CameraData.GetViewMatrix(0), 0);
 
                             // Right eye
-                            CoreUtils.SetRenderTarget(commandBuffer, data.GaussianSplatRT, ClearFlag.Color, Color.clear, 0, CubemapFace.Unknown, 1);
+                            CoreUtils.SetRenderTarget(commandBuffer, data.GaussianSplatRT, data.SourceDepth, ClearFlag.Color, Color.clear, 0, CubemapFace.Unknown, 1);
                             GaussianSplatRenderSystem.instance.SortAndRenderSplats(data.CameraData.camera, commandBuffer, data.CameraData.GetViewMatrix(1), 1);
                         }
                         else
@@ -104,11 +104,11 @@ namespace GaussianSplatting.Runtime
                             // once for each eye. TODO: Revisit this when Unity fixes the issue.
 
                             // Render to left eye
-                            CoreUtils.SetRenderTarget(commandBuffer, data.GaussianSplatRT, ClearFlag.Color, Color.clear, 0, CubemapFace.Unknown, 0);
+                            CoreUtils.SetRenderTarget(commandBuffer, data.GaussianSplatRT, data.SourceDepth, ClearFlag.Color, Color.clear, 0, CubemapFace.Unknown, 0);
                             GaussianSplatRenderSystem.instance.RenderPreparedSplats(commandBuffer, 0);
 
                             // Render to right eye
-                            CoreUtils.SetRenderTarget(commandBuffer, data.GaussianSplatRT, ClearFlag.Color, Color.clear, 0, CubemapFace.Unknown, 1);
+                            CoreUtils.SetRenderTarget(commandBuffer, data.GaussianSplatRT, data.SourceDepth, ClearFlag.Color, Color.clear, 0, CubemapFace.Unknown, 1);
                             GaussianSplatRenderSystem.instance.RenderPreparedSplats(commandBuffer, 1);
                             matComposite = renderData.matComposite;
                         }
