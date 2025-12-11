@@ -349,7 +349,7 @@ namespace GaussianSplatting.Runtime
         internal GraphicsBuffer m_GpuView;
         internal GraphicsBuffer m_GpuIndexBuffer;
 
-        struct SortResources
+        internal struct SortResources
         {
             public GraphicsBuffer distances;
             public GraphicsBuffer keys;
@@ -557,7 +557,7 @@ namespace GaussianSplatting.Runtime
             return resources;
         }
 
-        SortResources GetSortResourcesForView(int viewIndex)
+        internal SortResources GetSortResourcesForView(int viewIndex)
         {
             if (!m_SortResources.TryGetValue(viewIndex, out var resources))
             {
@@ -568,7 +568,7 @@ namespace GaussianSplatting.Runtime
             return resources;
         }
 
-        void StoreSortResourcesForView(int viewIndex, SortResources resources)
+        internal void StoreSortResourcesForView(int viewIndex, SortResources resources)
         {
             m_SortResources[viewIndex] = resources;
         }
