@@ -40,7 +40,7 @@ namespace GaussianSplatting.Runtime
 
             // add sorting, view calc and drawing commands for each splat object
             Material matComposite =
-                GaussianSplatRenderSystem.instance.SortAndRenderSplats(ctx.hdCamera.camera, ctx.cmd);
+                GaussianSplatRenderSystem.instance.SortAndRenderSplats(ctx.hdCamera.camera, ctx.cmd, ctx.hdCamera.camera.worldToCameraMatrix);
 
             // compose
             ctx.cmd.BeginSample(GaussianSplatRenderSystem.s_ProfCompose);
