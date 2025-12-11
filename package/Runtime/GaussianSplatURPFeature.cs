@@ -84,11 +84,11 @@ namespace GaussianSplatting.Runtime
 
                             // Left eye
                             CoreUtils.SetRenderTarget(commandBuffer, data.GaussianSplatRT, data.SourceDepth, ClearFlag.Color, Color.clear, 0, CubemapFace.Unknown, 0);
-                            matComposite = GaussianSplatRenderSystem.instance.SortAndRenderSplats(data.CameraData.camera, commandBuffer, data.CameraData.GetViewMatrix(0), 0);
+                            matComposite = GaussianSplatRenderSystem.instance.SortAndRenderSplats(data.CameraData.camera, commandBuffer, data.CameraData.GetViewMatrix(0), 0, 0);
 
                             // Right eye
                             CoreUtils.SetRenderTarget(commandBuffer, data.GaussianSplatRT, data.SourceDepth, ClearFlag.Color, Color.clear, 0, CubemapFace.Unknown, 1);
-                            GaussianSplatRenderSystem.instance.SortAndRenderSplats(data.CameraData.camera, commandBuffer, data.CameraData.GetViewMatrix(1), 1);
+                            GaussianSplatRenderSystem.instance.SortAndRenderSplats(data.CameraData.camera, commandBuffer, data.CameraData.GetViewMatrix(1), 1, 1);
                         }
                         else
                         {
