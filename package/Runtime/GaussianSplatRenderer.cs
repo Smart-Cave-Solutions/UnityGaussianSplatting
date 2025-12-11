@@ -46,6 +46,7 @@ namespace GaussianSplatting.Runtime
         {
             public Material matComposite;
             public List<RenderItem> renderItems = new();
+            public int viewIndex;
         }
         
         private PreparedRenderData m_LastPreparedData;
@@ -136,6 +137,8 @@ namespace GaussianSplatting.Runtime
             {
                 m_LastPreparedData.renderItems.Clear();
             }
+
+            m_LastPreparedData.viewIndex = viewIndex;
             
             Material matComposite = null;
 
@@ -205,9 +208,12 @@ namespace GaussianSplatting.Runtime
 
         // New optimized method that just draws the prepared splats for a specific eye
         // ReSharper disable once MemberCanBePrivate.Global - used by HDRP/URP features that are not always compiled
-        public void RenderPreparedSplats(CommandBuffer cmb, int eyeIndex)
+        public void RenderPreparedSplats(CommandBuffer cmb, int eyeIndex, int viewIndex = -1)
         {
             if (m_LastPreparedData == null || m_LastPreparedData.renderItems.Count == 0)
+                return;
+
+            if (m_LastPreparedData.viewIndex != viewIndex)
                 return;
 
             foreach (var item in m_LastPreparedData.renderItems)
@@ -230,7 +236,7 @@ namespace GaussianSplatting.Runtime
             var renderData = PrepareSplats(cam, cmb, view, viewIndex);
             
             // Render the prepared splats
-            RenderPreparedSplats(cmb, eyeIndex);
+            RenderPreparedSplats(cmb, eyeIndex, viewIndex);
             
             // Return the composite material
             return renderData.matComposite;

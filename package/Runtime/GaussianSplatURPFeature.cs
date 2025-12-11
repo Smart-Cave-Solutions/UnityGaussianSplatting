@@ -97,7 +97,8 @@ namespace GaussianSplatting.Runtime
                             CoreUtils.SetRenderTarget(commandBuffer, data.GaussianSplatRT, ClearFlag.Color, Color.clear);
 
                             // Prepare the splats once - sort them and calculate view data
-                            var renderData = GaussianSplatRenderSystem.instance.PrepareSplats(data.CameraData.camera, commandBuffer, data.CameraData.GetViewMatrix());
+                            var viewIndex = data.CameraData.xr.multipassId;
+                            var renderData = GaussianSplatRenderSystem.instance.PrepareSplats(data.CameraData.camera, commandBuffer, data.CameraData.GetViewMatrix(viewIndex), viewIndex);
                             
                             // [Quest3] Workaround for stereo rendering. Unity is not able to correctly set unity_stereoEyeIndex when drawing to
                             // a render texture array, so we need to do it manually. Also, we need to draw the same material twice,
@@ -105,11 +106,11 @@ namespace GaussianSplatting.Runtime
 
                             // Render to left eye
                             CoreUtils.SetRenderTarget(commandBuffer, data.GaussianSplatRT, data.SourceDepth, ClearFlag.Color, Color.clear, 0, CubemapFace.Unknown, 0);
-                            GaussianSplatRenderSystem.instance.RenderPreparedSplats(commandBuffer, 0);
+                            GaussianSplatRenderSystem.instance.RenderPreparedSplats(commandBuffer, 0, viewIndex);
 
                             // Render to right eye
                             CoreUtils.SetRenderTarget(commandBuffer, data.GaussianSplatRT, data.SourceDepth, ClearFlag.Color, Color.clear, 0, CubemapFace.Unknown, 1);
-                            GaussianSplatRenderSystem.instance.RenderPreparedSplats(commandBuffer, 1);
+                            GaussianSplatRenderSystem.instance.RenderPreparedSplats(commandBuffer, 1, viewIndex);
                             matComposite = renderData.matComposite;
                         }
 
