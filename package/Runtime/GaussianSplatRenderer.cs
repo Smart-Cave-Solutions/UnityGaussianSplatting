@@ -152,7 +152,7 @@ namespace GaussianSplatting.Runtime
                 // Sort the splats
                 var matrix = gs.transform.localToWorldMatrix;
                 var sortResources = gs.GetSortResourcesForView(viewIndex);
-                if (sortResources.frameCounter % gs.m_SortNthFrame == 0)
+                if (gs.ShouldSortThisFrame(sortResources))
                     gs.SortPoints(cmb, cam, matrix, view, ref sortResources);
                 ++sortResources.frameCounter;
                 gs.StoreSortResourcesForView(viewIndex, sortResources);
@@ -322,6 +322,9 @@ namespace GaussianSplatting.Runtime
         public bool m_SHOnly;
         [Range(1,30)] [Tooltip("Sort splats only every N frames")]
         public int m_SortNthFrame = 1;
+        [Range(1, 8)]
+        [Tooltip("Spread per-view sorting across multiple frames so XR views can update on different frames.")]
+        public int m_ViewSortSpread = 1;
         [Tooltip("When in VR, sort splats separately for each eye. This increases accuracy but reduces performance.")]
         public bool m_SortPerEye = false;
         [Range(0,10)] [Tooltip("Cull splats close to the camera")]
@@ -355,6 +358,7 @@ namespace GaussianSplatting.Runtime
             public GraphicsBuffer keys;
             public GpuSorting.Args sorterArgs;
             public int frameCounter;
+            public int frameOffset;
         }
 
         readonly Dictionary<int, SortResources> m_SortResources = new();
@@ -527,10 +531,10 @@ namespace GaussianSplatting.Runtime
 
             EnsureSorterAndRegister();
 
-            StoreSortResourcesForView(-1, CreateSortResources(count));
+            StoreSortResourcesForView(-1, CreateSortResources(count, 0));
         }
 
-        SortResources CreateSortResources(int count)
+        SortResources CreateSortResources(int count, int frameOffset)
         {
             var resources = new SortResources
             {
@@ -539,7 +543,8 @@ namespace GaussianSplatting.Runtime
                 keys = new GraphicsBuffer(GraphicsBuffer.Target.Structured, count, 4)
                     { name = "GaussianSplatSortIndices" },
                 sorterArgs = new GpuSorting.Args { count = (uint)count },
-                frameCounter = 0
+                frameCounter = frameOffset,
+                frameOffset = frameOffset
             };
 
             // init keys buffer to splat indices
@@ -557,15 +562,35 @@ namespace GaussianSplatting.Runtime
             return resources;
         }
 
+        int GetViewSortOffset(int viewIndex)
+        {
+            if (viewIndex < 0)
+                return 0;
+
+            return m_ViewSortSpread <= 1 ? 0 : Mathf.Abs(viewIndex) % m_ViewSortSpread;
+        }
+
         internal SortResources GetSortResourcesForView(int viewIndex)
         {
+            var frameOffset = GetViewSortOffset(viewIndex);
             if (!m_SortResources.TryGetValue(viewIndex, out var resources))
             {
-                resources = CreateSortResources(m_SplatCount);
+                resources = CreateSortResources(m_SplatCount, frameOffset);
                 m_SortResources[viewIndex] = resources;
+            }
+            else if (resources.frameOffset != frameOffset)
+            {
+                resources.frameOffset = frameOffset;
+                resources.frameCounter = frameOffset;
             }
 
             return resources;
+        }
+
+        internal bool ShouldSortThisFrame(SortResources resources)
+        {
+            var sortInterval = Mathf.Max(1, m_SortNthFrame);
+            return (resources.frameCounter % sortInterval) == 0;
         }
 
         internal void StoreSortResourcesForView(int viewIndex, SortResources resources)
