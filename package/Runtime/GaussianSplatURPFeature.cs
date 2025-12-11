@@ -98,7 +98,7 @@ namespace GaussianSplatting.Runtime
 
                             // Prepare the splats once - sort them and calculate view data
                             var viewIndex = data.CameraData.xr.multipassId;
-                            var renderData = GaussianSplatRenderSystem.instance.PrepareSplats(data.CameraData.camera, commandBuffer, data.CameraData.GetViewMatrix(viewIndex), viewIndex);
+                            var renderData = GaussianSplatRenderSystem.instance.PrepareSplats(data.CameraData.camera, commandBuffer, data.CameraData.GetViewMatrix(), viewIndex);
                             
                             // [Quest3] Workaround for stereo rendering. Unity is not able to correctly set unity_stereoEyeIndex when drawing to
                             // a render texture array, so we need to do it manually. Also, we need to draw the same material twice,
