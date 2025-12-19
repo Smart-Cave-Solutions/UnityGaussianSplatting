@@ -404,6 +404,8 @@ namespace GaussianSplatting.Runtime
             public static readonly int MatrixWorldToObject = Shader.PropertyToID("_MatrixWorldToObject");
             public static readonly int VecScreenParams = Shader.PropertyToID("_VecScreenParams");
             public static readonly int VecWorldSpaceCameraPos = Shader.PropertyToID("_VecWorldSpaceCameraPos");
+            public static readonly int VecWorldSpaceCameraPosLeft = Shader.PropertyToID("_VecWorldSpaceCameraPosLeft");
+            public static readonly int VecWorldSpaceCameraPosRight = Shader.PropertyToID("_VecWorldSpaceCameraPosRight");
             public static readonly int CameraTargetTexture = Shader.PropertyToID("_CameraTargetTexture");
             public static readonly int SelectionCenter = Shader.PropertyToID("_SelectionCenter");
             public static readonly int SelectionDelta = Shader.PropertyToID("_SelectionDelta");
@@ -415,6 +417,10 @@ namespace GaussianSplatting.Runtime
             public static readonly int SplatOtherMouseDown = Shader.PropertyToID("_SplatOtherMouseDown");
             public static readonly int ViewProjMatrixLeft = Shader.PropertyToID("_ViewProjMatrixLeft");
             public static readonly int ViewProjMatrixRight = Shader.PropertyToID("_ViewProjMatrixRight");
+            public static readonly int MatrixMVLeft = Shader.PropertyToID("_MatrixMVLeft");
+            public static readonly int MatrixMVRight = Shader.PropertyToID("_MatrixMVRight");
+            public static readonly int MatrixPLeft = Shader.PropertyToID("_MatrixPLeft");
+            public static readonly int MatrixPRight = Shader.PropertyToID("_MatrixPRight");
         }
 
         [field: NonSerialized] public bool editModified { get; private set; }
@@ -691,13 +697,13 @@ namespace GaussianSplatting.Runtime
             // calculate view dependent data for each splat
             SetAssetDataOnCS(cmb, KernelIndices.CalcViewData);
 
-            cmb.SetComputeMatrixParam(m_CSSplatUtilities, Props.MatrixMV, matView * matO2W);
             cmb.SetComputeMatrixParam(m_CSSplatUtilities, Props.MatrixObjectToWorld, matO2W);
             cmb.SetComputeMatrixParam(m_CSSplatUtilities, Props.MatrixWorldToObject, matW2O);
-            bool isStereo = XRSettings.enabled && cam.stereoEnabled && 
-                            (XRSettings.stereoRenderingMode == XRSettings.StereoRenderingMode.SinglePassInstanced || 
+            bool isStereo = XRSettings.enabled && cam.stereoEnabled &&
+                            (XRSettings.stereoRenderingMode == XRSettings.StereoRenderingMode.SinglePassInstanced ||
                              XRSettings.stereoRenderingMode == XRSettings.StereoRenderingMode.SinglePassMultiview);
             Matrix4x4 proj;
+            Matrix4x4 matrixMV;
             
             if (isStereo)
             {
@@ -706,28 +712,39 @@ namespace GaussianSplatting.Runtime
                     cam.GetStereoProjectionMatrix(Camera.StereoscopicEye.Left), true);
                 Matrix4x4 matVPLeft       = stereoProjLeft * stereoViewLeft;
                 cmb.SetComputeMatrixParam(m_CSSplatUtilities, Props.ViewProjMatrixLeft, matVPLeft);
+                Matrix4x4 matMVLeft       = stereoViewLeft * matO2W;
+                cmb.SetComputeMatrixParam(m_CSSplatUtilities, Props.MatrixMVLeft, matMVLeft);
+                cmb.SetComputeMatrixParam(m_CSSplatUtilities, Props.MatrixPLeft, stereoProjLeft);
+                cmb.SetComputeVectorParam(m_CSSplatUtilities, Props.VecWorldSpaceCameraPosLeft, stereoViewLeft.inverse.GetColumn(3));
 
                 Matrix4x4 stereoViewRight = cam.GetStereoViewMatrix(Camera.StereoscopicEye.Right);
                 Matrix4x4 stereoProjRight = GL.GetGPUProjectionMatrix(
                     cam.GetStereoProjectionMatrix(Camera.StereoscopicEye.Right), true);
                 Matrix4x4 matVPRight      = stereoProjRight * stereoViewRight;
                 cmb.SetComputeMatrixParam(m_CSSplatUtilities, Props.ViewProjMatrixRight, matVPRight);
+                Matrix4x4 matMVRight      = stereoViewRight * matO2W;
+                cmb.SetComputeMatrixParam(m_CSSplatUtilities, Props.MatrixMVRight, matMVRight);
+                cmb.SetComputeMatrixParam(m_CSSplatUtilities, Props.MatrixPRight, stereoProjRight);
+                cmb.SetComputeVectorParam(m_CSSplatUtilities, Props.VecWorldSpaceCameraPosRight, stereoViewRight.inverse.GetColumn(3));
 
                 proj = stereoProjLeft; // use left eye P for covariance
+                matrixMV = matMVLeft;
                 cmb.SetComputeIntParam(m_CSSplatUtilities, Props.IsStereo, 1);
             }
             else
             {
                 cmb.SetComputeIntParam(m_CSSplatUtilities, Props.IsStereo, 0);
-                
+
                 // non-XR path: use the camera projection
                 proj = GL.GetGPUProjectionMatrix(cam.projectionMatrix, true);
                 Matrix4x4 matVP = proj * matView;
                 cmb.SetComputeMatrixParam(m_CSSplatUtilities, Props.ViewProjMatrixLeft, matVP);
+                matrixMV = matView * matO2W;
             }
-            
+
             // send projection to compute
             cmb.SetComputeMatrixParam(m_CSSplatUtilities, Props.MatrixP, proj);
+            cmb.SetComputeMatrixParam(m_CSSplatUtilities, Props.MatrixMV, matrixMV);
 
             cmb.SetComputeVectorParam(m_CSSplatUtilities, Props.VecScreenParams, screenPar);
             cmb.SetComputeVectorParam(m_CSSplatUtilities, Props.VecWorldSpaceCameraPos, camPos);

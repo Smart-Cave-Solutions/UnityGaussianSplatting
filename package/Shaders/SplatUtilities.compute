@@ -86,6 +86,12 @@ cbuffer StereoMatrices
 {
     float4x4 _ViewProjMatrixLeft;
     float4x4 _ViewProjMatrixRight;
+    float4x4 _MatrixMVLeft;
+    float4x4 _MatrixMVRight;
+    float4x4 _MatrixPLeft;
+    float4x4 _MatrixPRight;
+    float4 _VecWorldSpaceCameraPosLeft;
+    float4 _VecWorldSpaceCameraPosRight;
 };
 
 RWStructuredBuffer<SplatViewData> _SplatViewData;
@@ -193,7 +199,7 @@ bool IsSplatCut(float3 pos)
     return finalCut;
 }
 
-SplatViewData CalculateEyeViewData(SplatData splat, float3 centerWorldPos, float4x4 viewProjMatrix, bool isDeleted, bool isCut, float splatScale, half opacityScale)
+SplatViewData CalculateEyeViewData(SplatData splat, float3 centerWorldPos, float4x4 viewProjMatrix, float4x4 matrixMV, float4x4 matrixP, float3 worldSpaceCameraPos, bool isDeleted, bool isCut, float splatScale, half opacityScale)
 {
     SplatViewData view = (SplatViewData)0;
     
@@ -218,11 +224,11 @@ SplatViewData CalculateEyeViewData(SplatData splat, float3 centerWorldPos, float
         float splatScale2 = splatScale * splatScale;
         cov3d0 *= splatScale2;
         cov3d1 *= splatScale2;
-        float3 cov2d = CalcCovariance2D(splat.pos, cov3d0, cov3d1, _MatrixMV, _MatrixP, _VecScreenParams);
+        float3 cov2d = CalcCovariance2D(splat.pos, cov3d0, cov3d1, matrixMV, matrixP, _VecScreenParams);
         
         DecomposeCovariance(cov2d, view.axis1, view.axis2);
 
-        float3 worldViewDir = _VecWorldSpaceCameraPos.xyz - centerWorldPos;
+        float3 worldViewDir = worldSpaceCameraPos - centerWorldPos;
         float3 objViewDir = mul((float3x3)_MatrixWorldToObject, worldViewDir);
         objViewDir = normalize(objViewDir);
 
@@ -269,8 +275,8 @@ void CSCalcViewData (uint3 id : SV_DispatchThreadID)
     if (_IsStereo)
     {
         // Calculate view data for both eyes
-        SplatViewData viewLeft = CalculateEyeViewData(splat, centerWorldPos, _ViewProjMatrixLeft, isDeleted, isCut, splatScale, opacityScale);
-        SplatViewData viewRight = CalculateEyeViewData(splat, centerWorldPos, _ViewProjMatrixRight, isDeleted, isCut, splatScale, opacityScale);
+        SplatViewData viewLeft = CalculateEyeViewData(splat, centerWorldPos, _ViewProjMatrixLeft, _MatrixMVLeft, _MatrixPLeft, _VecWorldSpaceCameraPosLeft.xyz, isDeleted, isCut, splatScale, opacityScale);
+        SplatViewData viewRight = CalculateEyeViewData(splat, centerWorldPos, _ViewProjMatrixRight, _MatrixMVRight, _MatrixPRight, _VecWorldSpaceCameraPosRight.xyz, isDeleted, isCut, splatScale, opacityScale);
         
         // Store both views
         _SplatViewData[idx * 2] = viewLeft;
@@ -278,7 +284,7 @@ void CSCalcViewData (uint3 id : SV_DispatchThreadID)
     }
     else
     {
-        _SplatViewData[idx] = CalculateEyeViewData(splat, centerWorldPos, UNITY_MATRIX_VP, isDeleted, isCut, splatScale, opacityScale);
+        _SplatViewData[idx] = CalculateEyeViewData(splat, centerWorldPos, UNITY_MATRIX_VP, _MatrixMV, _MatrixP, _VecWorldSpaceCameraPos.xyz, isDeleted, isCut, splatScale, opacityScale);
     }
 }
 
