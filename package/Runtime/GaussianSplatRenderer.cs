@@ -308,6 +308,12 @@ namespace GaussianSplatting.Runtime
         [Range(0.05f, 20.0f)]
         [Tooltip("Additional scaling factor for opacity")]
         public float m_OpacityScale = 1.0f;
+        [Range(0f, 1f)]
+        [Tooltip("Clamp projected splat radius in screen space as a fraction of the smaller screen dimension. Set to 0 to disable.")]
+        public float m_MaxScreenSpaceRadius = 0.5f;
+        [Range(0f, 1f)]
+        [Tooltip("Fade range after the clamp radius, as a fraction of the smaller screen dimension, before splats are fully discarded.")]
+        public float m_ScreenSpaceRadiusFade = 0.1f;
         [Range(0, 3)] [Tooltip("Spherical Harmonics order to use")]
         public int m_SHOrder = 3;
         [Tooltip("Show only Spherical Harmonics contribution, using gray color")]
@@ -385,6 +391,8 @@ namespace GaussianSplatting.Runtime
             public static readonly int OrderBuffer = Shader.PropertyToID("_OrderBuffer");
             public static readonly int SplatScale = Shader.PropertyToID("_SplatScale");
             public static readonly int SplatOpacityScale = Shader.PropertyToID("_SplatOpacityScale");
+            public static readonly int SplatScreenRadiusClamp = Shader.PropertyToID("_SplatScreenRadiusClamp");
+            public static readonly int SplatScreenRadiusFade = Shader.PropertyToID("_SplatScreenRadiusFade");
             public static readonly int SplatSize = Shader.PropertyToID("_SplatSize");
             public static readonly int SplatCount = Shader.PropertyToID("_SplatCount");
             public static readonly int SplatNearClip = Shader.PropertyToID("_SplatNearClip");
@@ -750,6 +758,8 @@ namespace GaussianSplatting.Runtime
             cmb.SetComputeVectorParam(m_CSSplatUtilities, Props.VecWorldSpaceCameraPos, camPos);
             cmb.SetComputeFloatParam(m_CSSplatUtilities, Props.SplatScale, m_SplatScale);
             cmb.SetComputeFloatParam(m_CSSplatUtilities, Props.SplatOpacityScale, m_OpacityScale);
+            cmb.SetComputeFloatParam(m_CSSplatUtilities, Props.SplatScreenRadiusClamp, m_MaxScreenSpaceRadius);
+            cmb.SetComputeFloatParam(m_CSSplatUtilities, Props.SplatScreenRadiusFade, m_ScreenSpaceRadiusFade);
             cmb.SetComputeIntParam(m_CSSplatUtilities, Props.SHOrder, m_SHOrder);
             cmb.SetComputeIntParam(m_CSSplatUtilities, Props.SHOnly, m_SHOnly ? 1 : 0);
 
