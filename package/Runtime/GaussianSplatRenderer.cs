@@ -261,10 +261,6 @@ namespace GaussianSplatting.Runtime
             m_CommandBuffer.SetRenderTarget(GaussianSplatRenderer.Props.GaussianSplatRT, BuiltinRenderTextureType.CurrentActive);
             m_CommandBuffer.ClearRenderTarget(RTClearFlags.Color, new Color(0, 0, 0, 0), 0, 0);
 
-            // We only need this to determine whether we're rendering into backbuffer or not. However, detection this
-            // way only works in BiRP so only do it here.
-            m_CommandBuffer.SetGlobalTexture(GaussianSplatRenderer.Props.CameraTargetTexture, BuiltinRenderTextureType.CameraTarget);
-
             // add sorting, view calc and drawing commands for each splat object
             Material matComposite = SortAndRenderSplats(cam, m_CommandBuffer, cam.worldToCameraMatrix);
 
@@ -744,7 +740,7 @@ namespace GaussianSplatting.Runtime
                 cmb.SetComputeIntParam(m_CSSplatUtilities, Props.IsStereo, 0);
 
                 // non-XR path: use the camera projection
-                proj = GL.GetGPUProjectionMatrix(cam.projectionMatrix, true);
+                proj = GL.GetGPUProjectionMatrix(cam.projectionMatrix, cam.targetTexture != null);
                 Matrix4x4 matVP = proj * matView;
                 cmb.SetComputeMatrixParam(m_CSSplatUtilities, Props.ViewProjMatrixLeft, matVP);
                 matrixMV = matView * matO2W;
