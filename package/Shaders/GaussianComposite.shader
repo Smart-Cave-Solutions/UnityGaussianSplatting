@@ -46,7 +46,8 @@ v2f vert (uint vtxID : SV_VertexID)
 #if defined(UNITY_SINGLE_PASS_STEREO) || defined(STEREO_INSTANCING_ON) || defined(STEREO_MULTIVIEW_ON)
 UNITY_DECLARE_TEX2DARRAY(_GaussianSplatRT);
 #else
-Texture2D _GaussianSplatRT;
+UNITY_DECLARE_TEX2D(_GaussianSplatRT);
+float4 _BlitScaleBias;
 #endif
 
 int _CustomStereoEyeIndex;
@@ -60,7 +61,9 @@ half4 frag (v2f i) : SV_Target
         col = UNITY_SAMPLE_TEX2DARRAY(_GaussianSplatRT, float3(normalizedUV, _CustomStereoEyeIndex));
     #else
         // single-texture for non-stereo
-        col = _GaussianSplatRT.Load(int3(i.vertex.xy, 0));
+        float2 uv = i.vertex.xy * _ScreenParams.zw;
+        uv = uv * _BlitScaleBias.xy + _BlitScaleBias.zw;
+        col = UNITY_SAMPLE_TEX2D(_GaussianSplatRT, uv);
     #endif
 
     col.rgb = GammaToLinearSpace(col.rgb);
