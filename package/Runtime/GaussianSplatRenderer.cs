@@ -261,6 +261,9 @@ namespace GaussianSplatting.Runtime
             m_CommandBuffer.SetRenderTarget(GaussianSplatRenderer.Props.GaussianSplatRT, BuiltinRenderTextureType.CurrentActive);
             m_CommandBuffer.ClearRenderTarget(RTClearFlags.Color, new Color(0, 0, 0, 0), 0, 0);
 
+            // Ensure the splat shaders see a render-texture sized target so they do not flip for backbuffer.
+            m_CommandBuffer.SetGlobalTexture(GaussianSplatRenderer.Props.CameraTargetTexture, GaussianSplatRenderer.Props.GaussianSplatRT);
+
             // add sorting, view calc and drawing commands for each splat object
             Material matComposite = SortAndRenderSplats(cam, m_CommandBuffer, cam.worldToCameraMatrix);
 
@@ -740,7 +743,7 @@ namespace GaussianSplatting.Runtime
                 cmb.SetComputeIntParam(m_CSSplatUtilities, Props.IsStereo, 0);
 
                 // non-XR path: use the camera projection
-                proj = GL.GetGPUProjectionMatrix(cam.projectionMatrix, cam.targetTexture != null);
+                proj = GL.GetGPUProjectionMatrix(cam.projectionMatrix, true);
                 Matrix4x4 matVP = proj * matView;
                 cmb.SetComputeMatrixParam(m_CSSplatUtilities, Props.ViewProjMatrixLeft, matVP);
                 matrixMV = matView * matO2W;
