@@ -48,7 +48,7 @@ namespace GaussianSplatting.Runtime
                                   && !cameraData.postProcessEnabled
                                   && !isStereo;
 
-                return shouldFlip ? new Vector4(1f, 1f, 0f, 0f) : new Vector4(1f, -1f, 0f, 1f);
+                return shouldFlip ? new Vector4(1f, -1f, 0f, 1f) : new Vector4(1f, 1f, 0f, 0f);
             }
 
             public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData)
