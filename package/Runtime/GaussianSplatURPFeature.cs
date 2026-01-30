@@ -38,6 +38,19 @@ namespace GaussianSplatting.Runtime
                 internal bool IsStereo;
             }
 
+            static Vector4 GetCompositeScaleBias(UniversalCameraData cameraData, bool isStereo)
+            {
+                if (!SystemInfo.graphicsUVStartsAtTop)
+                    return new Vector4(1f, 1f, 0f, 0f);
+
+                bool shouldFlip = cameraData.camera.targetTexture == null
+                                  && !cameraData.isSceneViewCamera
+                                  && !cameraData.postProcessEnabled
+                                  && !isStereo;
+
+                return shouldFlip ? new Vector4(1f, 1f, 0f, 0f) : new Vector4(1f, -1f, 0f, 1f);
+            }
+
             public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData)
             {
                 using var builder = renderGraph.AddUnsafePass(ProfilerTag, out PassData passData);
@@ -70,6 +83,7 @@ namespace GaussianSplatting.Runtime
                 {
                     var commandBuffer = CommandBufferHelpers.GetNativeCommandBuffer(context.cmd);
                     using var _ = new ProfilingScope(commandBuffer, s_profilingSampler);
+                    Vector4 blitScaleBias = GetCompositeScaleBias(data.CameraData, data.IsStereo);
                     
                     if (data.IsStereo)
                     {
@@ -116,6 +130,7 @@ namespace GaussianSplatting.Runtime
                         // Composite to the final target
                         commandBuffer.BeginSample(GaussianSplatRenderSystem.s_ProfCompose);
                         matComposite.SetTexture(s_gaussianSplatRT, data.GaussianSplatRT);
+                        matComposite.SetVector(GaussianSplatRenderer.Props.BlitScaleBias, blitScaleBias);
 
                         // [Quest3] Workaround for stereo rendering. Unity is not able to correctly set unity_stereoEyeIndex when drawing to
                         // a render texture array, so we need to do it manually. Also, we need to draw the same material twice,
@@ -137,6 +152,7 @@ namespace GaussianSplatting.Runtime
                         Material matComposite = GaussianSplatRenderSystem.instance.SortAndRenderSplats(data.CameraData.camera, commandBuffer, data.CameraData.GetViewMatrix());
                         
                         commandBuffer.BeginSample(GaussianSplatRenderSystem.s_ProfCompose);
+                        matComposite.SetVector(GaussianSplatRenderer.Props.BlitScaleBias, blitScaleBias);
                         Blitter.BlitCameraTexture(commandBuffer, data.GaussianSplatRT, data.SourceTexture, matComposite, 0);
                         commandBuffer.EndSample(GaussianSplatRenderSystem.s_ProfCompose);
                     }

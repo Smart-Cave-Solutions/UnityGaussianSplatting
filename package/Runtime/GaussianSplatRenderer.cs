@@ -407,6 +407,7 @@ namespace GaussianSplatting.Runtime
             public static readonly int VecWorldSpaceCameraPosLeft = Shader.PropertyToID("_VecWorldSpaceCameraPosLeft");
             public static readonly int VecWorldSpaceCameraPosRight = Shader.PropertyToID("_VecWorldSpaceCameraPosRight");
             public static readonly int CameraTargetTexture = Shader.PropertyToID("_CameraTargetTexture");
+            public static readonly int BlitScaleBias = Shader.PropertyToID("_BlitScaleBias");
             public static readonly int SelectionCenter = Shader.PropertyToID("_SelectionCenter");
             public static readonly int SelectionDelta = Shader.PropertyToID("_SelectionDelta");
             public static readonly int SelectionDeltaRot = Shader.PropertyToID("_SelectionDeltaRot");

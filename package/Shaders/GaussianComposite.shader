@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: MIT
 Shader "Hidden/Gaussian Splatting/Composite"
 {
+    Properties
+    {
+        _BlitScaleBias("Blit Scale Bias", Vector) = (1, 1, 0, 0)
+    }
     SubShader
     {
         Pass
@@ -49,6 +53,7 @@ UNITY_DECLARE_TEX2DARRAY(_GaussianSplatRT);
 UNITY_DECLARE_TEX2D(_GaussianSplatRT);
 #endif
 
+float4 _BlitScaleBias;
 int _CustomStereoEyeIndex;
 half4 frag (v2f i) : SV_Target
 {
@@ -57,6 +62,10 @@ half4 frag (v2f i) : SV_Target
     #if defined(UNITY_SINGLE_PASS_STEREO) || defined(STEREO_INSTANCING_ON) || defined(STEREO_MULTIVIEW_ON)
         // Normalize the pixel coordinates to [0,1] range
         float2 normalizedUV = float2(i.vertex.x / _ScreenParams.x, i.vertex.y / _ScreenParams.y);
+        #if UNITY_UV_STARTS_AT_TOP
+            normalizedUV.y = 1 - normalizedUV.y;
+        #endif
+        normalizedUV = normalizedUV * _BlitScaleBias.xy + _BlitScaleBias.zw;
         col = UNITY_SAMPLE_TEX2DARRAY(_GaussianSplatRT, float3(normalizedUV, _CustomStereoEyeIndex));
     #else
         // single-texture for non-stereo
@@ -65,6 +74,7 @@ half4 frag (v2f i) : SV_Target
             //if (_GaussianSplatRT_TexelSize.y < 0)
                 uv.y = 1-uv.y;
         #endif
+        uv = uv * _BlitScaleBias.xy + _BlitScaleBias.zw;
         col = UNITY_SAMPLE_TEX2D(_GaussianSplatRT,uv);
     #endif
 
