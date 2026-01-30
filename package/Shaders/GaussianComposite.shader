@@ -54,7 +54,8 @@ float4 _BlitScaleBias;
 
 float2 GetCompositeUV(float4 positionCS)
 {
-    float2 uv = positionCS.xy / _ScreenParams.xy;
+    float4 screenPos = ComputeScreenPos(positionCS);
+    float2 uv = screenPos.xy / screenPos.w;
     float4 scaleBias = _BlitScaleBias;
     if (all(scaleBias == 0))
     {
