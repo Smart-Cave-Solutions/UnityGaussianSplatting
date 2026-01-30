@@ -13,6 +13,7 @@ namespace GaussianSplatting.Runtime
     class GaussianSplatHDRPPass : CustomPass
     {
         RTHandle m_RenderTarget;
+        static readonly int s_blitScaleBias = Shader.PropertyToID("_BlitScaleBias");
 
         // It can be used to configure render targets and their clear state. Also to create temporary render target textures.
         // When empty this render pass will render to the active camera render target.
@@ -45,6 +46,7 @@ namespace GaussianSplatting.Runtime
             // compose
             ctx.cmd.BeginSample(GaussianSplatRenderSystem.s_ProfCompose);
             CoreUtils.SetRenderTarget(ctx.cmd, ctx.cameraColorBuffer, ClearFlag.None);
+            ctx.cmd.SetGlobalVector(s_blitScaleBias, new Vector4(1f, 1f, 0f, 0f));
             CoreUtils.DrawFullScreen(ctx.cmd, matComposite, ctx.propertyBlock, shaderPassId: 0);
             ctx.cmd.EndSample(GaussianSplatRenderSystem.s_ProfCompose);
         }

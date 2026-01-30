@@ -28,6 +28,7 @@ namespace GaussianSplatting.Runtime
             const string ProfilerTag = "GaussianSplatRenderGraph";
             static readonly ProfilingSampler s_profilingSampler = new(ProfilerTag);
             static readonly int s_gaussianSplatRT = Shader.PropertyToID(GaussianSplatRTName);
+            static readonly int s_blitScaleBias = Shader.PropertyToID("_BlitScaleBias");
 
             class PassData
             {
@@ -116,6 +117,7 @@ namespace GaussianSplatting.Runtime
                         // Composite to the final target
                         commandBuffer.BeginSample(GaussianSplatRenderSystem.s_ProfCompose);
                         matComposite.SetTexture(s_gaussianSplatRT, data.GaussianSplatRT);
+                        commandBuffer.SetGlobalVector(s_blitScaleBias, new Vector4(1f, 1f, 0f, 0f));
 
                         // [Quest3] Workaround for stereo rendering. Unity is not able to correctly set unity_stereoEyeIndex when drawing to
                         // a render texture array, so we need to do it manually. Also, we need to draw the same material twice,

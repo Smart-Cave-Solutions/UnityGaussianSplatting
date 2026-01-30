@@ -25,6 +25,7 @@ CGPROGRAM
 struct v2f
 {
     float4 vertex : SV_POSITION;
+    float2 uv : TEXCOORD0;
 };
 
 struct appdata
@@ -39,14 +40,18 @@ v2f vert (uint vtxID : SV_VertexID)
     
     float2 quadPos = float2(vtxID&1, (vtxID>>1)&1) * 4.0 - 1.0;
     o.vertex = float4(quadPos, 1, 1);
+    float2 uv = quadPos * 0.5 + 0.5;
+    o.uv = uv * _BlitScaleBias.xy + _BlitScaleBias.zw;
     return o;
 }
+
+float4 _BlitScaleBias;
 
 // Separate textures for left and right eyes
 #if defined(UNITY_SINGLE_PASS_STEREO) || defined(STEREO_INSTANCING_ON) || defined(STEREO_MULTIVIEW_ON)
 UNITY_DECLARE_TEX2DARRAY(_GaussianSplatRT);
 #else
-Texture2D _GaussianSplatRT;
+UNITY_DECLARE_TEX2D(_GaussianSplatRT);
 #endif
 
 int _CustomStereoEyeIndex;
@@ -55,12 +60,10 @@ half4 frag (v2f i) : SV_Target
     half4 col;    
     // Check if using separate eye textures
     #if defined(UNITY_SINGLE_PASS_STEREO) || defined(STEREO_INSTANCING_ON) || defined(STEREO_MULTIVIEW_ON)
-        // Normalize the pixel coordinates to [0,1] range
-        float2 normalizedUV = float2(i.vertex.x / _ScreenParams.x, i.vertex.y / _ScreenParams.y);
-        col = UNITY_SAMPLE_TEX2DARRAY(_GaussianSplatRT, float3(normalizedUV, _CustomStereoEyeIndex));
+        col = UNITY_SAMPLE_TEX2DARRAY(_GaussianSplatRT, float3(i.uv, _CustomStereoEyeIndex));
     #else
         // single-texture for non-stereo
-        col = _GaussianSplatRT.Load(int3(i.vertex.xy, 0));
+        col = UNITY_SAMPLE_TEX2D(_GaussianSplatRT, i.uv);
     #endif
 
     col.rgb = GammaToLinearSpace(col.rgb);
