@@ -28,7 +28,8 @@ half4 Fragment(Varyings input) : SV_Target
 {
     UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 
-    half4 col = SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, input.texcoord.xy);
+    float2 uv = input.texcoord.xy * _BlitScaleBias.xy + _BlitScaleBias.zw;
+    half4 col = SAMPLE_TEXTURE2D_X(_BlitTexture, sampler_LinearClamp, uv);
     col.rgb = GammaToLinearSpaceApprox(col.rgb);
     col.a = saturate(col.a * 1.5);
     return col;
