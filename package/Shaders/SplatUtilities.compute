@@ -167,7 +167,7 @@ void DecomposeCovariance(float3 cov2d, out float2 v1, out float2 v2)
     float lambda2 = max(mid - radius, 0.1);
     float2 diagVec = normalize(float2(offDiag, lambda1 - diag1));
     diagVec.y = -diagVec.y;
-    float maxSize = 4096.0;
+    float maxSize = 128;
     v1 = min(sqrt(2.0 * lambda1), maxSize) * diagVec;
     v2 = min(sqrt(2.0 * lambda2), maxSize) * float2(diagVec.y, -diagVec.x);
 
