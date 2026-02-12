@@ -361,6 +361,7 @@ namespace GaussianSplatting.Runtime
         internal Material m_MatDebugBoxes;
 
         internal int m_FrameCounter;
+        int m_LastSortRecoveryFrame = -1;
         GaussianSplatAsset m_PrevAsset;
         Hash128 m_PrevHash;
         bool m_Registered;
@@ -569,6 +570,7 @@ namespace GaussianSplatting.Runtime
         public void OnEnable()
         {
             m_FrameCounter = 0;
+            m_LastSortRecoveryFrame = -1;
             if (!resourcesAreSetUp)
                 return;
 
@@ -758,9 +760,37 @@ namespace GaussianSplatting.Runtime
             cmb.DispatchCompute(m_CSSplatUtilities, (int)KernelIndices.CalcViewData, (m_SplatCount + (int)gsX - 1)/(int)gsX, 1, 1);
         }
 
+        bool TryEnsureSortingOperational()
+        {
+            if (!HasValidAsset || m_SplatCount <= 0)
+                return false;
+
+            EnsureSorterAndRegister();
+            if (m_Sorter == null || !m_Sorter.Valid)
+                return false;
+
+            bool missingSortBuffers = m_GpuSortDistances == null || m_GpuSortKeys == null ||
+                                      m_GpuSortDistances.count != m_SplatCount || m_GpuSortKeys.count != m_SplatCount;
+            bool missingSortResources = m_SorterArgs.resources.altBuffer == null || m_SorterArgs.resources.altPayloadBuffer == null ||
+                                        m_SorterArgs.resources.passHistBuffer == null || m_SorterArgs.resources.globalHistBuffer == null;
+
+            if (!missingSortBuffers && !missingSortResources)
+                return true;
+
+            if (m_LastSortRecoveryFrame == Time.frameCount)
+                return false;
+            m_LastSortRecoveryFrame = Time.frameCount;
+
+            InitSortBuffers(m_SplatCount);
+            return m_Sorter != null && m_Sorter.Valid && m_SorterArgs.resources.altBuffer != null;
+        }
+
         internal void SortPoints(CommandBuffer cmd, Camera cam, Matrix4x4 matrix, Matrix4x4 view)
         {
             if (cam.cameraType == CameraType.Preview)
+                return;
+
+            if (!TryEnsureSortingOperational())
                 return;
 
             Matrix4x4 worldToCamMatrix = view;
@@ -782,12 +812,6 @@ namespace GaussianSplatting.Runtime
             cmd.DispatchCompute(m_CSSplatUtilities, (int)KernelIndices.CalcDistances, (m_GpuSortDistances.count + (int)gsX - 1)/(int)gsX, 1, 1);
 
             // sort the splats
-            EnsureSorterAndRegister();
-            if (m_Sorter == null || !m_Sorter.Valid || m_SorterArgs.resources.altBuffer == null)
-            {
-                cmd.EndSample(s_ProfSort);
-                return;
-            }
             m_Sorter.Dispatch(cmd, m_SorterArgs);
             cmd.EndSample(s_ProfSort);
         }
