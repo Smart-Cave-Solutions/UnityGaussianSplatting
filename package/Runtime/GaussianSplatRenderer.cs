@@ -534,7 +534,7 @@ namespace GaussianSplatting.Runtime
             m_SorterArgs.inputKeys = m_GpuSortDistances;
             m_SorterArgs.inputValues = m_GpuSortKeys;
             m_SorterArgs.count = (uint)count;
-            if (m_Sorter.Valid)
+            if (m_Sorter != null && m_Sorter.Valid)
                 m_SorterArgs.resources = GpuSorting.SupportResources.Load((uint)count);
         }
 
@@ -554,7 +554,7 @@ namespace GaussianSplatting.Runtime
 
         public void EnsureSorterAndRegister()
         {
-            if (m_Sorter == null && resourcesAreSetUp)
+            if ((m_Sorter == null || !m_Sorter.Valid) && resourcesAreSetUp)
             {
                 m_Sorter = new GpuSorting(m_CSSplatUtilities);
             }
@@ -670,6 +670,7 @@ namespace GaussianSplatting.Runtime
         public void OnDisable()
         {
             DisposeResourcesForAsset();
+            m_Sorter = null;
             GaussianSplatRenderSystem.instance.UnregisterSplat(this);
             m_Registered = false;
 
@@ -782,6 +783,11 @@ namespace GaussianSplatting.Runtime
 
             // sort the splats
             EnsureSorterAndRegister();
+            if (m_Sorter == null || !m_Sorter.Valid || m_SorterArgs.resources.altBuffer == null)
+            {
+                cmd.EndSample(s_ProfSort);
+                return;
+            }
             m_Sorter.Dispatch(cmd, m_SorterArgs);
             cmd.EndSample(s_ProfSort);
         }
