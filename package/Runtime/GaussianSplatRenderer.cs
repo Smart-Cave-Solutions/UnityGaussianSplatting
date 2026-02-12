@@ -459,7 +459,20 @@ namespace GaussianSplatting.Runtime
             m_Asset.otherData != null &&
             m_Asset.shData != null &&
             m_Asset.colorData != null;
-        public bool HasValidRenderSetup => m_GpuPosData != null && m_GpuOtherData != null && m_GpuChunks != null;
+        static bool IsValidBuffer(GraphicsBuffer buf) => buf != null && buf.IsValid();
+
+        bool HasValidSortBuffers => IsValidBuffer(m_GpuSortDistances) && IsValidBuffer(m_GpuSortKeys) &&
+                                    m_GpuSortDistances.count == m_SplatCount && m_GpuSortKeys.count == m_SplatCount;
+
+        public bool HasValidRenderSetup =>
+            IsValidBuffer(m_GpuPosData) &&
+            IsValidBuffer(m_GpuOtherData) &&
+            IsValidBuffer(m_GpuSHData) &&
+            IsValidBuffer(m_GpuChunks) &&
+            IsValidBuffer(m_GpuView) &&
+            IsValidBuffer(m_GpuIndexBuffer) &&
+            HasValidSortBuffers &&
+            m_GpuColorData != null;
 
         const int kGpuViewDataSize = 40;
 
@@ -763,6 +776,9 @@ namespace GaussianSplatting.Runtime
             if (cam.cameraType == CameraType.Preview)
                 return;
 
+            if (!HasValidSortBuffers)
+                InitSortBuffers(m_SplatCount);
+
             Matrix4x4 worldToCamMatrix = view;
             worldToCamMatrix.m20 *= -1;
             worldToCamMatrix.m21 *= -1;
@@ -795,7 +811,7 @@ namespace GaussianSplatting.Runtime
         public void Update()
         {
             var curHash = m_Asset ? m_Asset.dataHash : new Hash128();
-            if (m_PrevAsset != m_Asset || m_PrevHash != curHash)
+            if (m_PrevAsset != m_Asset || m_PrevHash != curHash || (HasValidAsset && !HasValidRenderSetup))
             {
                 m_PrevAsset = m_Asset;
                 m_PrevHash = curHash;
