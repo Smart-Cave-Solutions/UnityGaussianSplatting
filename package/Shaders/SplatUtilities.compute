@@ -98,6 +98,8 @@ RWStructuredBuffer<SplatViewData> _SplatViewData;
 
 float _SplatScale;
 float _SplatOpacityScale;
+float _SplatScreenRadiusClamp;
+float _SplatScreenRadiusFade;
 uint _SHOrder;
 uint _SHOnly;
 uint _IsStereo;
@@ -228,17 +230,43 @@ SplatViewData CalculateEyeViewData(SplatData splat, float3 centerWorldPos, float
         
         DecomposeCovariance(cov2d, view.axis1, view.axis2);
 
+        float fade = 1.0;
+        if (_SplatScreenRadiusClamp > 0)
+        {
+            float maxRadius = max(length(view.axis1), length(view.axis2));
+            float minScreenSize = min(_VecScreenParams.x, _VecScreenParams.y);
+            if (maxRadius > 0 && minScreenSize > 0)
+            {
+                float clampRadiusPixels = _SplatScreenRadiusClamp * minScreenSize;
+                float fadeRadiusPixels = _SplatScreenRadiusFade * minScreenSize;
+
+                float clampFactor = min(1.0, clampRadiusPixels / maxRadius);
+                view.axis1 *= clampFactor;
+                view.axis2 *= clampFactor;
+
+                if (fadeRadiusPixels > 0)
+                {
+                    float fadeEnd = clampRadiusPixels + fadeRadiusPixels;
+                    fade = saturate((fadeEnd - maxRadius) / fadeRadiusPixels);
+                }
+                else if (maxRadius > clampRadiusPixels)
+                {
+                    fade = 0.0;
+                }
+            }
+        }
+
         float3 worldViewDir = worldSpaceCameraPos - centerWorldPos;
         float3 objViewDir = mul((float3x3)_MatrixWorldToObject, worldViewDir);
         objViewDir = normalize(objViewDir);
 
         half4 col;
         col.rgb = ShadeSH(splat.sh, objViewDir, _SHOrder, _SHOnly != 0);
-        col.a = min(splat.opacity * opacityScale, 65000);
+        col.a = min(splat.opacity * opacityScale, 65000) * fade;
         view.color.x = (f32tof16(col.r) << 16) | f32tof16(col.g);
         view.color.y = (f32tof16(col.b) << 16) | f32tof16(col.a);
     }
-    
+
     return view;
 }
 
