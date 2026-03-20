@@ -127,6 +127,9 @@ namespace GaussianSplatting.Runtime
         // This does the sorting and calculates view data, but doesn't actually render
         // ReSharper disable once MemberCanBePrivate.Global - used by HDRP/URP features that are not always compiled
         public PreparedRenderData PrepareSplats(Camera cam, CommandBuffer cmb)
+            => PrepareSplats(cam, cmb, IsSinglePassStereoCamera(cam));
+
+        public PreparedRenderData PrepareSplats(Camera cam, CommandBuffer cmb, bool isStereo)
         {
             if (m_LastPreparedData == null)
             {
@@ -180,7 +183,7 @@ namespace GaussianSplatting.Runtime
 
                 // Calculate view data once for stereo (will calculate for both eyes)
                 cmb.BeginSample(s_ProfCalcView);
-                gs.CalcViewData(cmb, cam);
+                gs.CalcViewData(cmb, cam, isStereo);
                 cmb.EndSample(s_ProfCalcView);
 
                 // Set up draw parameters
@@ -221,9 +224,12 @@ namespace GaussianSplatting.Runtime
 
         // ReSharper disable once MemberCanBePrivate.Global - used by HDRP/URP features that are not always compiled
         public Material SortAndRenderSplats(Camera cam, CommandBuffer cmb, int eyeIndex = -1)
+            => SortAndRenderSplats(cam, cmb, IsSinglePassStereoCamera(cam), eyeIndex);
+
+        public Material SortAndRenderSplats(Camera cam, CommandBuffer cmb, bool isStereo, int eyeIndex = -1)
         {
             // Prepare the splats (sort and calculate view data)
-            var renderData = PrepareSplats(cam, cmb);
+            var renderData = PrepareSplats(cam, cmb, isStereo);
             
             // Render the prepared splats
             RenderPreparedSplats(cmb, eyeIndex);
@@ -272,6 +278,20 @@ namespace GaussianSplatting.Runtime
             m_CommandBuffer.DrawProcedural(Matrix4x4.identity, matComposite, 0, MeshTopology.Triangles, 3, 1);
             m_CommandBuffer.EndSample(s_ProfCompose);
             m_CommandBuffer.ReleaseTemporaryRT(GaussianSplatRenderer.Props.GaussianSplatRT);
+        }
+
+        internal static bool IsSinglePassStereoCamera(Camera cam, TextureDimension targetDimension = TextureDimension.Unknown)
+        {
+            if (cam == null || !cam.stereoEnabled || Application.isEditor)
+                return false;
+            if (targetDimension != TextureDimension.Unknown && targetDimension != TextureDimension.Tex2DArray)
+                return false;
+
+            if (!XRSettings.enabled)
+                return true;
+
+            return XRSettings.stereoRenderingMode == XRSettings.StereoRenderingMode.SinglePassInstanced ||
+                   XRSettings.stereoRenderingMode == XRSettings.StereoRenderingMode.SinglePassMultiview;
         }
         
     }
@@ -658,7 +678,7 @@ namespace GaussianSplatting.Runtime
             DestroyImmediate(m_MatDebugBoxes);
         }
 
-        internal void CalcViewData(CommandBuffer cmb, Camera cam)
+        internal void CalcViewData(CommandBuffer cmb, Camera cam, bool isStereo)
         {
             if (cam.cameraType == CameraType.Preview)
                 return;
@@ -669,8 +689,7 @@ namespace GaussianSplatting.Runtime
             Matrix4x4 matO2W = tr.localToWorldMatrix;
             Matrix4x4 matW2O = tr.worldToLocalMatrix;
             int screenW = cam.pixelWidth, screenH = cam.pixelHeight;
-            int eyeW = XRSettings.eyeTextureWidth, eyeH = XRSettings.eyeTextureHeight;
-            Vector4 screenPar = new Vector4(eyeW != 0 ? eyeW : screenW, eyeH != 0 ? eyeH : screenH, 0, 0);
+            Vector4 screenPar = new Vector4(screenW, screenH, 0, 0);
             Vector4 camPos = cam.transform.position;
 
             // calculate view dependent data for each splat
@@ -679,11 +698,6 @@ namespace GaussianSplatting.Runtime
             cmb.SetComputeMatrixParam(m_CSSplatUtilities, Props.MatrixMV, matView * matO2W);
             cmb.SetComputeMatrixParam(m_CSSplatUtilities, Props.MatrixObjectToWorld, matO2W);
             cmb.SetComputeMatrixParam(m_CSSplatUtilities, Props.MatrixWorldToObject, matW2O);
-            bool isStereo = XRSettings.enabled && cam.stereoEnabled && 
-                            (XRSettings.stereoRenderingMode == XRSettings.StereoRenderingMode.SinglePassInstanced || 
-                             XRSettings.stereoRenderingMode == XRSettings.StereoRenderingMode.SinglePassMultiview) &&
-                            !Application.isEditor;
-            
             if (isStereo)
             {
                 Matrix4x4 stereoViewLeft = cam.GetStereoViewMatrix(Camera.StereoscopicEye.Left);
