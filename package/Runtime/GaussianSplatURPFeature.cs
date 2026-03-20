@@ -45,7 +45,7 @@ namespace GaussianSplatting.Runtime
 
                 // isStereo requires the actual render target to be a Tex2DArray (main XR swapchain).
                 // OVROverlayCanvas and other stereo-enabled-but-2D cameras must take the non-stereo path.
-                bool isStereo = GaussianSplatRenderer.IsSinglePassStereoCamera(
+                bool isStereo = GaussianSplatRenderSystem.IsSinglePassStereoCamera(
                     cameraData.camera,
                     cameraData.cameraTargetDescriptor.dimension);
                 // Always use cameraTargetDescriptor — it matches the actual depth buffer size (including render scale).
