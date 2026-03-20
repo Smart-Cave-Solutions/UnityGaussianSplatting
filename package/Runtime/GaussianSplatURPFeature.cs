@@ -10,8 +10,6 @@ using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.Rendering.RenderGraphModule;
-using UnityEngine.XR;
-
 namespace GaussianSplatting.Runtime
 {
     // Note: I have no idea what is the purpose of ScriptableRendererFeature vs ScriptableRenderPass, which one of those
@@ -47,11 +45,9 @@ namespace GaussianSplatting.Runtime
 
                 // isStereo requires the actual render target to be a Tex2DArray (main XR swapchain).
                 // OVROverlayCanvas and other stereo-enabled-but-2D cameras must take the non-stereo path.
-                bool isStereo = XRSettings.enabled && cameraData.camera.stereoEnabled && 
-                                (XRSettings.stereoRenderingMode == XRSettings.StereoRenderingMode.SinglePassInstanced || 
-                                 XRSettings.stereoRenderingMode == XRSettings.StereoRenderingMode.SinglePassMultiview) &&
-                                !Application.isEditor &&
-                                cameraData.cameraTargetDescriptor.dimension == TextureDimension.Tex2DArray;
+                bool isStereo = GaussianSplatRenderer.IsSinglePassStereoCamera(
+                    cameraData.camera,
+                    cameraData.cameraTargetDescriptor.dimension);
                 // Always use cameraTargetDescriptor — it matches the actual depth buffer size (including render scale).
                 // XRSettings.eyeTextureDesc returns the unscaled XR eye texture and causes dimension mismatches.
                 RenderTextureDescriptor rtDesc = cameraData.cameraTargetDescriptor;
@@ -83,7 +79,7 @@ namespace GaussianSplatting.Runtime
                         // produces identical results at 2x the GPU cost.
                         CoreUtils.SetRenderTarget(commandBuffer, data.GaussianSplatRT, ClearFlag.Color, Color.clear);
 
-                        var renderData = GaussianSplatRenderSystem.instance.PrepareSplats(data.CameraData.camera, commandBuffer);
+                        var renderData = GaussianSplatRenderSystem.instance.PrepareSplats(data.CameraData.camera, commandBuffer, true);
                         
                         // [Quest3] Workaround: Unity doesn't correctly set unity_stereoEyeIndex when drawing to
                         // a render texture array, so we draw each eye manually.
@@ -116,7 +112,7 @@ namespace GaussianSplatting.Runtime
                         // Single-eye rendering
                         commandBuffer.SetGlobalTexture(s_gaussianSplatRT, data.GaussianSplatRT);
                         CoreUtils.SetRenderTarget(commandBuffer, data.GaussianSplatRT, data.SourceDepth, ClearFlag.Color, Color.clear);
-                        Material matComposite = GaussianSplatRenderSystem.instance.SortAndRenderSplats(data.CameraData.camera, commandBuffer);
+                        Material matComposite = GaussianSplatRenderSystem.instance.SortAndRenderSplats(data.CameraData.camera, commandBuffer, false);
                         
                         commandBuffer.BeginSample(GaussianSplatRenderSystem.s_ProfCompose);
                         Blitter.BlitCameraTexture(commandBuffer, data.GaussianSplatRT, data.SourceTexture, matComposite, 0);
